@@ -1,0 +1,4 @@
+.env
+backend/.env
+chroma_db/
+temp_uploads/
