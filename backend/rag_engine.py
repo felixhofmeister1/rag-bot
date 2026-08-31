@@ -116,15 +116,12 @@ class RAGEngine:
         }
 
     def clear_database(self) -> bool:
-        """Deletes vector collection and resets database directory state."""
+        """Deletes vector collection cleanly using native Chroma API without locking SQLite."""
         try:
             self.vector_store.delete_collection()
         except Exception:
             pass
         
-        if os.path.exists(PERSIST_DIRECTORY):
-            shutil.rmtree(PERSIST_DIRECTORY, ignore_errors=True)
-            
         self.vector_store = Chroma(
             persist_directory=PERSIST_DIRECTORY,
             embedding_function=self.embeddings,
