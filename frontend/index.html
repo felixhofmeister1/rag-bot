@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnowledgeBot | Enterprise RAG Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col font-sans">
+
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-brand-600 rounded-lg text-white">
+                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none">KnowledgeBot</h1>
+                    <span class="text-xs text-slate-400 font-mono">Vector RAG Engine v1.0</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full text-xs font-medium border border-slate-200 dark:border-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Indexed Chunks: <strong id="stat-chunks" class="text-brand-600 dark:text-brand-400">0</strong></span>
+                </div>
+
+                <button id="reset-btn" title="Delete All Files & Reset Store" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 px-3 py-1.5 rounded-full text-xs font-medium transition">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Reset Store</span>
+                </button>
+
+                <button id="theme-toggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+                    <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+                    <i data-lucide="moon" class="w-4 h-4 block dark:hidden text-slate-600"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+
+        <section class="lg:col-span-4 flex flex-col gap-6">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <i data-lucide="folder-up" class="w-4 h-4"></i> Ingestion Engine
+                </h2>
+                
+                <div id="dropzone" class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-500 dark:hover:border-brand-500 rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition bg-slate-50/50 dark:bg-slate-950/50 text-center group">
+                    <div class="p-3 bg-slate-100 dark:bg-slate-800 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/30 rounded-full text-slate-500 group-hover:text-brand-600 transition">
+                        <i data-lucide="file-up" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium">Click to upload or drag & drop</p>
+                        <p class="text-xs text-slate-400 mt-1">PDF, TXT, or MD (Max 50MB)</p>
+                    </div>
+                    <input type="file" id="file-input" class="hidden" accept=".pdf,.txt,.md">
+                </div>
+
+                <div id="upload-status" class="mt-4 hidden text-xs p-3 rounded-lg border"></div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex-1">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <i data-lucide="layers" class="w-4 h-4"></i> Active Tech Stack
+                </h2>
+                <ul class="space-y-3 text-sm">
+                    <li class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                        <span>Embedding Model:</span>
+                        <code class="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">text-embedding-3</code>
+                    </li>
+                    <li class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                        <span>Vector Store:</span>
+                        <code class="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">ChromaDB Persistent</code>
+                    </li>
+                    <li class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                        <span>Generation Model:</span>
+                        <code class="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">GPT-4o-Mini</code>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="lg:col-span-8 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden h-[750px]">
+            
+            <div id="chat-feed" class="flex-1 p-6 overflow-y-auto space-y-6">
+                <div class="flex gap-4 max-w-2xl">
+                    <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                        Hello! Upload documents to your knowledge base using the sidebar, then ask questions below to query your vector store with accurate source citations.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                <form id="query-form" class="flex items-center gap-2">
+                    <input type="text" id="query-input" placeholder="Ask a question about your documents..." 
+                           class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400">
+                    <button type="submit" id="submit-btn" class="bg-brand-600 hover:bg-brand-500 text-white px-5 py-3 rounded-xl text-sm font-medium transition flex items-center gap-2 shrink-0">
+                        <span>Query</span>
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Theme Switcher Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        // API Base URL
+        const API_URL = "/api";
+
+        // DOM Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const uploadStatus = document.getElementById('upload-status');
+        const chatFeed = document.getElementById('chat-feed');
+        const queryForm = document.getElementById('query-form');
+        const queryInput = document.getElementById('query-input');
+        const statChunks = document.getElementById('stat-chunks');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // Fetch DB Stats
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${API_URL}/stats`);
+                const data = await res.json();
+                statChunks.textContent = data.total_chunks ?? data.chunks ?? 0;
+            } catch (e) {
+                console.error("Failed to load DB stats", e);
+            }
+        }
+        fetchStats();
+
+        // Reset Database Handler
+        resetBtn.addEventListener('click', async () => {
+            if (!confirm("Are you sure you want to delete all vector store data and clear history?")) return;
+
+            try {
+                const res = await fetch(`${API_URL}/reset`, { method: 'DELETE' });
+                if (!res.ok) throw new Error("Reset failed");
+                
+                // Clear UI Chat Feed & Reset Counter
+                chatFeed.innerHTML = `
+                    <div class="flex gap-4 max-w-2xl">
+                        <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
+                            <i data-lucide="bot" class="w-5 h-5"></i>
+                        </div>
+                        <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                            Knowledge store cleared. Upload fresh documents to begin querying again.
+                        </div>
+                    </div>
+                `;
+                uploadStatus.classList.add('hidden');
+                fetchStats();
+                lucide.createIcons();
+            } catch (err) {
+                alert("Error clearing vector store: " + err.message);
+            }
+        });
+
+        // File Ingestion Logic
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-brand-500');
+        });
+
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-brand-500'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-brand-500');
+            if (e.dataTransfer.files.length) handleFileUpload(e.dataTransfer.files[0]);
+        });
+
+        async function handleFileUpload(file) {
+            if (!file) return;
+
+            uploadStatus.classList.remove('hidden', 'bg-red-500/10', 'text-red-400', 'bg-emerald-500/10', 'text-emerald-400');
+            uploadStatus.classList.add('bg-brand-500/10', 'text-brand-500', 'border-brand-500/20');
+            uploadStatus.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Chunks & Embeddings generating for ${file.name}...</span>`;
+            lucide.createIcons();
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.detail || "Upload failed");
+
+                uploadStatus.className = "mt-4 text-xs p-3 rounded-lg border bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400";
+                uploadStatus.innerHTML = `Successfully ingested <strong>${data.filename}</strong> (${data.chunks} chunks created).`;
+                fetchStats();
+            } catch (err) {
+                uploadStatus.className = "mt-4 text-xs p-3 rounded-lg border bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400";
+                uploadStatus.innerHTML = `Error: ${err.message}`;
+            }
+        }
+
+        // Query Handler
+        queryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = queryInput.value.trim();
+            if (!question) return;
+
+            // Render User Question
+            appendUserMessage(question);
+            queryInput.value = '';
+
+            // Render Loader Message
+            const loaderId = appendLoaderMessage();
+
+            try {
+                const res = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, top_k: 4 })
+                });
+
+                const data = await res.json();
+                document.getElementById(loaderId).remove();
+
+                const answerText = typeof data === "string" ? data : (data.answer || JSON.stringify(data));
+                const citationsList = data.citations || [];
+
+                appendBotResponse(answerText, citationsList);
+            } catch (err) {
+                document.getElementById(loaderId).remove();
+                appendBotResponse("Failed to fetch response. Ensure backend server is running.", []);
+            }
+        });
+
+        function appendUserMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = "flex gap-4 max-w-2xl ml-auto flex-row-reverse";
+            msg.innerHTML = `
+                <div class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <div class="bg-brand-600 text-white p-4 rounded-2xl rounded-tr-none text-sm leading-relaxed">${text}</div>
+            `;
+            chatFeed.appendChild(msg);
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+            lucide.createIcons();
+        }
+
+        function appendLoaderMessage() {
+            const id = 'loader-' + Date.now();
+            const msg = document.createElement('div');
+            msg.id = id;
+            msg.className = "flex gap-4 max-w-2xl";
+            msg.innerHTML = `
+                <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
+                    <i data-lucide="bot" class="w-5 h-5"></i>
+                </div>
+                <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed flex items-center gap-2">
+                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-brand-500"></i> Scanning Vector Space...
+                </div>
+            `;
+            chatFeed.appendChild(msg);
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+            lucide.createIcons();
+            return id;
+        }
+
+        function appendBotResponse(answer, citations) {
+            const msg = document.createElement('div');
+            msg.className = "flex gap-4 max-w-3xl";
+            
+            let citationsHTML = '';
+            if (citations && citations.length > 0) {
+                citationsHTML = `
+                    <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                            <i data-lucide="bookmark" class="w-3 h-3"></i> Sources & Citations (${citations.length})
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            ${citations.map(c => `
+                                <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
+                                    <div class="font-medium text-brand-600 dark:text-brand-400 truncate">${c.source}</div>
+                                    <div class="text-slate-400 text-[10px] mt-0.5">Page ${c.page} • Relevance: ${c.score}</div>
+                                    <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-1 line-clamp-2 font-mono">${c.snippet}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            msg.innerHTML = `
+                <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
+                    <i data-lucide="bot" class="w-5 h-5"></i>
+                </div>
+                <div class="bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                    <div>${answer}</div>
+                    ${citationsHTML}
+                </div>
+            `;
+            chatFeed.appendChild(msg);
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
