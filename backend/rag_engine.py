@@ -7,16 +7,23 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import Chroma
 from langchain.schema import Document
+from chromadb.config import Settings  # Added import
 
 PERSIST_DIRECTORY = "./chroma_db"
 
 class RAGEngine:
     def __init__(self):
+        # Configure Chroma to run without loading heavy native C++ models on CPU
+        self.chroma_settings = Settings(
+            anonymized_telemetry=False,
+            is_persistent=True
+        )
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         self.vector_store = Chroma(
             persist_directory=PERSIST_DIRECTORY,
             embedding_function=self.embeddings,
-            collection_name="knowledge_base"
+            collection_name="knowledge_base",
+            client_settings=self.chroma_settings
         )
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 
@@ -52,7 +59,8 @@ class RAGEngine:
         self.vector_store = Chroma(
             persist_directory=PERSIST_DIRECTORY,
             embedding_function=self.embeddings,
-            collection_name="knowledge_base"
+            collection_name="knowledge_base",
+            client_settings=self.chroma_settings
         )
         self.vector_store.add_documents(chunks)
         return len(chunks)
@@ -125,6 +133,7 @@ class RAGEngine:
         self.vector_store = Chroma(
             persist_directory=PERSIST_DIRECTORY,
             embedding_function=self.embeddings,
-            collection_name="knowledge_base"
+            collection_name="knowledge_base",
+            client_settings=self.chroma_settings
         )
         return True
