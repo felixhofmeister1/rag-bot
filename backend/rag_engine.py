@@ -1,34 +1,29 @@
 import os
 import uuid
-import shutil
 from typing import List, Dict, Any
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
-from chromadb.config import Settings  # Added import
 
-PERSIST_DIRECTORY = "./chroma_db"
+INDEX_PATH = "./faiss_index"
 
 class RAGEngine:
     def __init__(self):
-        # Configure Chroma to run without loading heavy native C++ models on CPU
-        self.chroma_settings = Settings(
-            anonymized_telemetry=False,
-            is_persistent=True
-        )
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        self.vector_store = Chroma(
-            persist_directory=PERSIST_DIRECTORY,
-            embedding_function=self.embeddings,
-            collection_name="knowledge_base",
-            client_settings=self.chroma_settings
-        )
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+        
+        if os.path.exists(INDEX_PATH):
+            self.vector_store = FAISS.load_local(
+                INDEX_PATH, 
+                self.embeddings, 
+                allow_dangerous_deserialization=True
+            )
+        else:
+            self.vector_store = None
 
     def process_and_ingest(self, file_path: str, filename: str) -> int:
-        """Loads, chunks, and adds documents to ChromaDB."""
         ext = filename.lower().split('.')[-1]
         
         if ext == "pdf":
@@ -40,7 +35,6 @@ class RAGEngine:
         
         docs = loader.load()
         
-        # Split documents into optimal chunks
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,
             chunk_overlap=150,
@@ -48,25 +42,27 @@ class RAGEngine:
         )
         chunks = text_splitter.split_documents(docs)
         
-        # Attach metadata for exact citations
         for idx, chunk in enumerate(chunks):
             chunk.metadata["source"] = filename
             chunk.metadata["chunk_id"] = str(uuid.uuid4())[:8]
             if "page" not in chunk.metadata:
                 chunk.metadata["page"] = 1
 
-        # Re-initialize collection target to handle post-reset state cleanly
-        self.vector_store = Chroma(
-            persist_directory=PERSIST_DIRECTORY,
-            embedding_function=self.embeddings,
-            collection_name="knowledge_base",
-            client_settings=self.chroma_settings
-        )
-        self.vector_store.add_documents(chunks)
+        if self.vector_store is None:
+            self.vector_store = FAISS.from_documents(chunks, self.embeddings)
+        else:
+            self.vector_store.add_documents(chunks)
+            
+        self.vector_store.save_local(INDEX_PATH)
         return len(chunks)
 
     def query(self, question: str, top_k: int = 4) -> Dict[str, Any]:
-        """Retrieves top matches and generates a response with citations."""
+        if self.vector_store is None:
+            return {
+                "answer": "No documents uploaded yet.",
+                "citations": []
+            }
+            
         results = self.vector_store.similarity_search_with_relevance_scores(question, k=top_k)
         
         if not results:
@@ -113,27 +109,15 @@ class RAGEngine:
         }
 
     def get_stats(self) -> Dict[str, Any]:
-        """Returns collection stats for the UI dashboard."""
-        try:
-            total = self.vector_store._collection.count()
-        except Exception:
-            total = 0
+        total = self.vector_store.index.ntotal if self.vector_store else 0
         return {
             "total_chunks": total,
-            "db_path": PERSIST_DIRECTORY
+            "db_path": INDEX_PATH
         }
 
     def clear_database(self) -> bool:
-        """Deletes vector collection cleanly using native Chroma API without locking SQLite."""
-        try:
-            self.vector_store.delete_collection()
-        except Exception:
-            pass
-        
-        self.vector_store = Chroma(
-            persist_directory=PERSIST_DIRECTORY,
-            embedding_function=self.embeddings,
-            collection_name="knowledge_base",
-            client_settings=self.chroma_settings
-        )
+        if os.path.exists(INDEX_PATH):
+            import shutil
+            shutil.rmtree(INDEX_PATH)
+        self.vector_store = None
         return True
