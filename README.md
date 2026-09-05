@@ -1,4 +1,4 @@
-# rag-bot
+# RAG Bot Engine
 
 A local Retrieval-Augmented Generation (RAG) system built with FastAPI, vector embeddings, and a custom frontend interface.
 
@@ -9,7 +9,7 @@ A local Retrieval-Augmented Generation (RAG) system built with FastAPI, vector e
 - **Frontend:** HTML / Static UI (`frontend/`)
 
 ## Project Structure
-
+```text
 ├── backend/
 │   ├── app.py           # FastAPI entrypoint and API routes
 │   ├── rag_engine.py    # Document chunking, embedding, and retrieval logic
